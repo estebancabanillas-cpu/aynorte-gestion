@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 
+const SHEETS_URL = "https://script.google.com/macros/s/AKfycbxoLjI95S3a4kw3l6onp_vMZX90j0xPF6tDresQ5JBvuTlNnbQHzWnYyrFJ3q312hy8bw/exec";
+
 const FLOTA = [
   { interno: "24", patente: "AF 988 TS" },
   { interno: "31", patente: "AG 208 SH" },
@@ -36,6 +38,15 @@ const capturarMeta = () => new Promise(resolve => {
     resolve({ fecha, hora, lat: "no disponible", lng: "no disponible" });
   }
 });
+
+const enviarASheets = (modulo, datos) => {
+  fetch(SHEETS_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ modulo, datos }),
+  }).catch(err => console.error("Error enviando a Sheets:", err));
+};
 
 function Field({ label, type, value, onChange, placeholder }) {
   return (
@@ -103,11 +114,7 @@ function CheckItemConVto({ label, value, onChange, vto, onVto }) {
 }
 
 function NivelItem({ label, value, onChange }) {
-  const opts = [
-    { label: "A nivel", bg: "#1a7a3a" },
-    { label: "Nivel alto", bg: "#e6a817" },
-    { label: "Nivel bajo", bg: "#c0392b" },
-  ];
+  const opts = [{ label: "A nivel", bg: "#1a7a3a" }, { label: "Nivel alto", bg: "#e6a817" }, { label: "Nivel bajo", bg: "#c0392b" }];
   return (
     <div style={{ borderBottom: "0.5px solid #ddd", paddingBottom: 12, marginBottom: 12 }}>
       <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 8 }}>{label}</div>
@@ -121,11 +128,7 @@ function NivelItem({ label, value, onChange }) {
 }
 
 function SemaforoItem({ label, value, onChange }) {
-  const opts = [
-    { label: "Limpio", bg: "#1a7a3a" },
-    { label: "Regular", bg: "#e6a817" },
-    { label: "Sucio", bg: "#c0392b" },
-  ];
+  const opts = [{ label: "Limpio", bg: "#1a7a3a" }, { label: "Regular", bg: "#e6a817" }, { label: "Sucio", bg: "#c0392b" }];
   return (
     <div style={{ borderBottom: "0.5px solid #ddd", paddingBottom: 12, marginBottom: 12 }}>
       <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 8 }}>{label}</div>
@@ -139,11 +142,7 @@ function SemaforoItem({ label, value, onChange }) {
 }
 
 function CubiertasItem({ value, onChange }) {
-  const opts = [
-    { label: "Buenas", bg: "#1a7a3a" },
-    { label: "Malas", bg: "#c0392b" },
-    { label: "Muy malas", bg: "#7b0d0d" },
-  ];
+  const opts = [{ label: "Buenas", bg: "#1a7a3a" }, { label: "Malas", bg: "#c0392b" }, { label: "Muy malas", bg: "#7b0d0d" }];
   return (
     <div style={{ borderBottom: "0.5px solid #ddd", paddingBottom: 12, marginBottom: 12 }}>
       <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 8 }}>Cubiertas</div>
@@ -157,14 +156,10 @@ function CubiertasItem({ value, onChange }) {
 }
 
 const initDocV = () => ({
-  cedulaVerde: { presente: false, vigente: false },
-  altaCNRT: { presente: false, vigente: false },
-  dut: { presente: false, vigente: false },
-  seguroAutomotor: { presente: false, vigente: false },
-  botiquin: { presente: false, vigente: false },
-  seguroInternacional: { presente: false, vigente: false },
-  revisionTecnica: { presente: false, vigente: false },
-  autorizManejo: { presente: false, vigente: false },
+  cedulaVerde: { presente: false, vigente: false }, altaCNRT: { presente: false, vigente: false },
+  dut: { presente: false, vigente: false }, seguroAutomotor: { presente: false, vigente: false },
+  botiquin: { presente: false, vigente: false }, seguroInternacional: { presente: false, vigente: false },
+  revisionTecnica: { presente: false, vigente: false }, autorizManejo: { presente: false, vigente: false },
 });
 
 const docVLabels = {
@@ -183,21 +178,35 @@ function ChoferModule() {
     docV: initDocV(),
     carnetNac: { presente: false, vigente: false, vto: "" },
     libretaTrabajo: { presente: false, vigente: false, vto: "" },
-    matafuego: { presente: false, vigente: false },
-    checkpoint: { presente: false, vigente: false },
-    antenaStarlink: { presente: false, vigente: false },
-    dobleAuxilio: { presente: false, vigente: false },
+    matafuego: { presente: false, vigente: false }, checkpoint: { presente: false, vigente: false },
+    antenaStarlink: { presente: false, vigente: false }, dobleAuxilio: { presente: false, vigente: false },
     cadenas: { presente: false, vigente: false },
     aceiteMotor: "", refrigerante: "", liquidoFreno: "", cubiertas: "", limpieza: "",
     tanqueLleno: false, kmInicio: "",
   });
   const [f2, setF2] = useState({ kmFinal: "", cantPasajeros: "", observaciones: "" });
-  const [saved, setSaved] = useState(false);
   const [meta, setMeta] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const upF1 = (k, v) => setF1(p => ({ ...p, [k]: v }));
   const upDV = (k, v) => setF1(p => ({ ...p, docV: { ...p.docV, [k]: v } }));
   const upF2 = (k, v) => setF2(p => ({ ...p, [k]: v }));
+
+  const handleSalida = async () => {
+    const m = await capturarMeta();
+    setMeta(m);
+    setEtapa(2);
+  };
+
+  const handleRegreso = async () => {
+    setSaving(true);
+    const m = await capturarMeta();
+    const metaFinal = { ...meta, horaRegreso: m.hora, latRegreso: m.lat, lngRegreso: m.lng };
+    enviarASheets("chofer", { ...f1, ...f2, interno: interno === "otro" ? otroInterno : interno, meta: metaFinal });
+    setSaving(false);
+    setSaved(true);
+  };
 
   return (
     <div>
@@ -252,8 +261,7 @@ function ChoferModule() {
             <input type="checkbox" checked={f1.tanqueLleno} onChange={e => upF1("tanqueLleno", e.target.checked)} style={{ width: 22, height: 22 }} />
             <span style={{ color: f1.tanqueLleno ? "#fff" : "#333" }}>Tanque lleno</span>
           </label>
-
-          <button onClick={async () => { const m = await capturarMeta(); setMeta(m); setEtapa(2); }} style={{ ...s.saveBtn, background: "#8B1A2E", color: "#fff" }}>
+          <button onClick={handleSalida} style={{ ...s.saveBtn, background: "#8B1A2E", color: "#fff" }}>
             Guardar y continuar al regreso →
           </button>
         </div>
@@ -268,8 +276,8 @@ function ChoferModule() {
             <label style={s.label}>Observaciones del viaje</label>
             <textarea value={f2.observaciones} onChange={e => upF2("observaciones", e.target.value)} rows={5} style={s.textarea} placeholder="Cualquier novedad del viaje..." />
           </div>
-          <button onClick={async () => { const m = await capturarMeta(); setMeta(prev => ({ ...prev, horaRegreso: m.hora, latRegreso: m.lat, lngRegreso: m.lng })); setSaved(true); }} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#1a5c8a", color: "#fff" }}>
-            {saved ? "✓ Registro completo guardado" : "Guardar registro completo"}
+          <button onClick={handleRegreso} disabled={saving || saved} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : saving ? "#999" : "#1a5c8a", color: "#fff" }}>
+            {saved ? "✓ Registro guardado en Sheets" : saving ? "Guardando..." : "Guardar registro completo"}
           </button>
         </div>
       )}
@@ -284,17 +292,24 @@ function LavadorModule() {
     FLOTA.map(v => ({ id: v.interno, interno: v.interno, patente: v.patente, lavado: false, observacion: "", externo: false }))
   );
   const [saved, setSaved] = useState(false);
-  const [meta, setMeta] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const upReg = (id, k, v) => setRegistros(r => r.map(x => x.id === id ? { ...x, [k]: v } : x));
   const addExterno = () => setRegistros(r => [...r, { id: "ext_" + Date.now(), interno: "", patente: "", lavado: false, observacion: "", externo: true }]);
+
+  const handleGuardar = async () => {
+    setSaving(true);
+    const meta = await capturarMeta();
+    enviarASheets("lavador", { horaEntrada, horaSalida, registros, meta });
+    setSaving(false);
+    setSaved(true);
+  };
 
   return (
     <div>
       <div style={s.sectionTitle}>Horario</div>
       <Field label="Hora de entrada" type="time" value={horaEntrada} onChange={setHE} />
       <Field label="Hora de salida" type="time" value={horaSalida} onChange={setHS} />
-
       <div style={s.sectionTitle}>Registro de lavado</div>
       {registros.map(r => (
         <div key={r.id} style={s.card}>
@@ -322,8 +337,8 @@ function LavadorModule() {
         </div>
       ))}
       <button onClick={addExterno} style={s.addBtn}>+ Agregar vehículo externo</button>
-      <button onClick={async () => { const m = await capturarMeta(); setMeta(m); setSaved(true); }} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#8B1A2E", color: "#fff" }}>
-        {saved ? "✓ Guardado" : "Guardar registro"}
+      <button onClick={handleGuardar} disabled={saving || saved} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : saving ? "#999" : "#8B1A2E", color: "#fff" }}>
+        {saved ? "✓ Guardado en Sheets" : saving ? "Guardando..." : "Guardar registro"}
       </button>
     </div>
   );
@@ -334,7 +349,7 @@ function MecanicoModule() {
   const [horaEgreso, setHE] = useState("");
   const [tareas, setTareas] = useState([{ id: 1, interno: "", otroInterno: "", dueno: "", descripcion: "", horas: "", repuestos: [{ id: 1, nombre: "", precio: "" }] }]);
   const [saved, setSaved] = useState(false);
-  const [meta, setMeta] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const addT = () => setTareas(t => [...t, { id: Date.now(), interno: "", otroInterno: "", dueno: "", descripcion: "", horas: "", repuestos: [{ id: 1, nombre: "", precio: "" }] }]);
   const remT = id => setTareas(t => t.filter(x => x.id !== id));
@@ -343,12 +358,19 @@ function MecanicoModule() {
   const remR = (tid, rid) => setTareas(t => t.map(x => x.id === tid ? { ...x, repuestos: x.repuestos.filter(r => r.id !== rid) } : x));
   const upR = (tid, rid, k, v) => setTareas(t => t.map(x => x.id === tid ? { ...x, repuestos: x.repuestos.map(r => r.id === rid ? { ...r, [k]: v } : r) } : x));
 
+  const handleGuardar = async () => {
+    setSaving(true);
+    const meta = await capturarMeta();
+    enviarASheets("mecanico", { horaIngreso, horaEgreso, tareas, meta });
+    setSaving(false);
+    setSaved(true);
+  };
+
   return (
     <div>
       <div style={s.sectionTitle}>Horario</div>
       <Field label="Hora de ingreso" type="time" value={horaIngreso} onChange={setHI} />
       <Field label="Hora de egreso" type="time" value={horaEgreso} onChange={setHE} />
-
       <div style={s.sectionTitle}>Tareas del día</div>
       {tareas.map((t, i) => (
         <div key={t.id} style={s.card}>
@@ -375,8 +397,8 @@ function MecanicoModule() {
         </div>
       ))}
       <button onClick={addT} style={s.addBtn}>+ Agregar tarea</button>
-      <button onClick={async () => { const m = await capturarMeta(); setMeta(m); setSaved(true); }} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#8B1A2E", color: "#fff" }}>
-        {saved ? "✓ Guardado" : "Guardar registro"}
+      <button onClick={handleGuardar} disabled={saving || saved} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : saving ? "#999" : "#8B1A2E", color: "#fff" }}>
+        {saved ? "✓ Guardado en Sheets" : saving ? "Guardando..." : "Guardar registro"}
       </button>
     </div>
   );
@@ -403,7 +425,6 @@ function App() {
         </div>
         {active && <button onClick={() => setActive(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 13 }}>← Volver</button>}
       </div>
-
       <div style={{ padding: "0 12px" }}>
         {!active && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
