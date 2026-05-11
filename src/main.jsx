@@ -24,6 +24,19 @@ const s = {
   addBtn: { width: "100%", padding: "12px", fontSize: 15, borderRadius: 12, marginBottom: 10, background: "#f0f0f0", border: "1px solid #ccc" },
 };
 
+const capturarMeta = () => new Promise(resolve => {
+  const fecha = new Date().toLocaleDateString("es-AR");
+  const hora = new Date().toLocaleTimeString("es-AR");
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ fecha, hora, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6) }),
+      () => resolve({ fecha, hora, lat: "no disponible", lng: "no disponible" })
+    );
+  } else {
+    resolve({ fecha, hora, lat: "no disponible", lng: "no disponible" });
+  }
+});
+
 function Field({ label, type, value, onChange, placeholder }) {
   return (
     <div>
@@ -186,18 +199,6 @@ function ChoferModule() {
   const upDV = (k, v) => setF1(p => ({ ...p, docV: { ...p.docV, [k]: v } }));
   const upF2 = (k, v) => setF2(p => ({ ...p, [k]: v }));
 
-  const capturarMeta = () => new Promise(resolve => {
-    const hora = new Date().toLocaleTimeString("es-AR");
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ hora, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6) }),
-        () => resolve({ hora, lat: "no disponible", lng: "no disponible" })
-      );
-    } else {
-      resolve({ hora, lat: "no disponible", lng: "no disponible" });
-    }
-  });
-
   return (
     <div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -283,6 +284,8 @@ function LavadorModule() {
     FLOTA.map(v => ({ id: v.interno, interno: v.interno, patente: v.patente, lavado: false, observacion: "", externo: false }))
   );
   const [saved, setSaved] = useState(false);
+  const [meta, setMeta] = useState(null);
+
   const upReg = (id, k, v) => setRegistros(r => r.map(x => x.id === id ? { ...x, [k]: v } : x));
   const addExterno = () => setRegistros(r => [...r, { id: "ext_" + Date.now(), interno: "", patente: "", lavado: false, observacion: "", externo: true }]);
 
@@ -319,7 +322,7 @@ function LavadorModule() {
         </div>
       ))}
       <button onClick={addExterno} style={s.addBtn}>+ Agregar vehículo externo</button>
-      <button onClick={() => setSaved(true)} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#8B1A2E", color: "#fff" }}>
+      <button onClick={async () => { const m = await capturarMeta(); setMeta(m); setSaved(true); }} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#8B1A2E", color: "#fff" }}>
         {saved ? "✓ Guardado" : "Guardar registro"}
       </button>
     </div>
@@ -331,6 +334,8 @@ function MecanicoModule() {
   const [horaEgreso, setHE] = useState("");
   const [tareas, setTareas] = useState([{ id: 1, interno: "", otroInterno: "", dueno: "", descripcion: "", horas: "", repuestos: [{ id: 1, nombre: "", precio: "" }] }]);
   const [saved, setSaved] = useState(false);
+  const [meta, setMeta] = useState(null);
+
   const addT = () => setTareas(t => [...t, { id: Date.now(), interno: "", otroInterno: "", dueno: "", descripcion: "", horas: "", repuestos: [{ id: 1, nombre: "", precio: "" }] }]);
   const remT = id => setTareas(t => t.filter(x => x.id !== id));
   const upT = (id, k, v) => setTareas(t => t.map(x => x.id === id ? { ...x, [k]: v } : x));
@@ -370,7 +375,7 @@ function MecanicoModule() {
         </div>
       ))}
       <button onClick={addT} style={s.addBtn}>+ Agregar tarea</button>
-      <button onClick={() => setSaved(true)} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#8B1A2E", color: "#fff" }}>
+      <button onClick={async () => { const m = await capturarMeta(); setMeta(m); setSaved(true); }} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#8B1A2E", color: "#fff" }}>
         {saved ? "✓ Guardado" : "Guardar registro"}
       </button>
     </div>
