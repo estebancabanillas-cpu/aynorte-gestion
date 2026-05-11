@@ -180,10 +180,23 @@ function ChoferModule() {
   });
   const [f2, setF2] = useState({ kmFinal: "", cantPasajeros: "", observaciones: "" });
   const [saved, setSaved] = useState(false);
+  const [meta, setMeta] = useState(null);
 
   const upF1 = (k, v) => setF1(p => ({ ...p, [k]: v }));
   const upDV = (k, v) => setF1(p => ({ ...p, docV: { ...p.docV, [k]: v } }));
   const upF2 = (k, v) => setF2(p => ({ ...p, [k]: v }));
+
+  const capturarMeta = () => new Promise(resolve => {
+    const hora = new Date().toLocaleTimeString("es-AR");
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ hora, lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6) }),
+        () => resolve({ hora, lat: "no disponible", lng: "no disponible" })
+      );
+    } else {
+      resolve({ hora, lat: "no disponible", lng: "no disponible" });
+    }
+  });
 
   return (
     <div>
@@ -239,7 +252,7 @@ function ChoferModule() {
             <span style={{ color: f1.tanqueLleno ? "#fff" : "#333" }}>Tanque lleno</span>
           </label>
 
-          <button onClick={() => setEtapa(2)} style={{ ...s.saveBtn, background: "#8B1A2E", color: "#fff" }}>
+          <button onClick={async () => { const m = await capturarMeta(); setMeta(m); setEtapa(2); }} style={{ ...s.saveBtn, background: "#8B1A2E", color: "#fff" }}>
             Guardar y continuar al regreso →
           </button>
         </div>
@@ -254,7 +267,7 @@ function ChoferModule() {
             <label style={s.label}>Observaciones del viaje</label>
             <textarea value={f2.observaciones} onChange={e => upF2("observaciones", e.target.value)} rows={5} style={s.textarea} placeholder="Cualquier novedad del viaje..." />
           </div>
-          <button onClick={() => setSaved(true)} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#1a5c8a", color: "#fff" }}>
+          <button onClick={async () => { const m = await capturarMeta(); setMeta(prev => ({ ...prev, horaRegreso: m.hora, latRegreso: m.lat, lngRegreso: m.lng })); setSaved(true); }} style={{ ...s.saveBtn, background: saved ? "#1a7a3a" : "#1a5c8a", color: "#fff" }}>
             {saved ? "✓ Registro completo guardado" : "Guardar registro completo"}
           </button>
         </div>
