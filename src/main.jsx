@@ -123,18 +123,21 @@ function VehiculoSelect({ value, onChange, otroTexto, onOtroTexto }) {
 }
 
 function CheckItem({ label, value, onChange }) {
+  const opts = [
+    { key: "presente", label: "Presente", color: "#1a7a3a" },
+    { key: "vigente", label: "Vigente", color: "#1a7a3a" },
+    { key: "inexistente", label: "Inexistente", color: "#c0392b" },
+  ];
   return (
     <div style={{ borderBottom: "0.5px solid #ddd", paddingBottom: 12, marginBottom: 12 }}>
       <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 8 }}>{label}</div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, flex: 1, background: value.presente ? "#1a7a3a" : "#f0f0f0", border: value.presente ? "2px solid #1a7a3a" : "0.5px solid #ccc", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
-          <input type="checkbox" checked={value.presente} onChange={e => onChange({ ...value, presente: e.target.checked })} style={{ width: 20, height: 20 }} />
-          <span style={{ color: value.presente ? "#fff" : "#555" }}>Presente</span>
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 15, flex: 1, background: value.vigente ? "#1a7a3a" : "#f0f0f0", border: value.vigente ? "2px solid #1a7a3a" : "0.5px solid #ccc", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
-          <input type="checkbox" checked={value.vigente} onChange={e => onChange({ ...value, vigente: e.target.checked })} style={{ width: 20, height: 20 }} />
-          <span style={{ color: value.vigente ? "#fff" : "#555" }}>Vigente</span>
-        </label>
+      <div style={{ display: "flex", gap: 8 }}>
+        {opts.map(o => (
+          <label key={o.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, flex: 1, background: value[o.key] ? o.color : "#f0f0f0", border: value[o.key] ? "2px solid " + o.color : "0.5px solid #ccc", borderRadius: 10, padding: "10px 8px", cursor: "pointer", justifyContent: "center" }}>
+            <input type="checkbox" checked={!!value[o.key]} onChange={e => onChange({ ...value, [o.key]: e.target.checked })} style={{ width: 18, height: 18 }} />
+            <span style={{ color: value[o.key] ? "#fff" : "#555" }}>{o.label}</span>
+          </label>
+        ))}
       </div>
     </div>
   );
@@ -203,10 +206,14 @@ function CubiertasItem({ value, onChange }) {
 }
 
 const initDocV = () => ({
-  cedulaVerde: { presente: false, vigente: false }, altaCNRT: { presente: false, vigente: false },
-  dut: { presente: false, vigente: false }, seguroAutomotor: { presente: false, vigente: false },
-  botiquin: { presente: false, vigente: false }, seguroInternacional: { presente: false, vigente: false },
-  revisionTecnica: { presente: false, vigente: false }, autorizManejo: { presente: false, vigente: false },
+  cedulaVerde: { presente: false, vigente: false, inexistente: false },
+  altaCNRT: { presente: false, vigente: false, inexistente: false },
+  dut: { presente: false, vigente: false, inexistente: false },
+  seguroAutomotor: { presente: false, vigente: false, inexistente: false },
+  botiquin: { presente: false, vigente: false, inexistente: false },
+  seguroInternacional: { presente: false, vigente: false, inexistente: false },
+  revisionTecnica: { presente: false, vigente: false, inexistente: false },
+  autorizManejo: { presente: false, vigente: false, inexistente: false },
 });
 
 const docVLabels = {
@@ -225,9 +232,11 @@ function ChoferModule({ usuario }) {
     fondos: "", docV: initDocV(),
     carnetNac: { presente: false, vigente: false, vto: "" },
     libretaTrabajo: { presente: false, vigente: false, vto: "" },
-    matafuego: { presente: false, vigente: false }, checkpoint: { presente: false, vigente: false },
-    antenaStarlink: { presente: false, vigente: false }, dobleAuxilio: { presente: false, vigente: false },
-    cadenas: { presente: false, vigente: false },
+    matafuego: { presente: false, vigente: false, inexistente: false },
+    checkpoint: { presente: false, vigente: false, inexistente: false },
+    antenaStarlink: { presente: false, vigente: false, inexistente: false },
+    dobleAuxilio: { presente: false, vigente: false, inexistente: false },
+    cadenas: { presente: false, vigente: false, inexistente: false },
     aceiteMotor: "", refrigerante: "", liquidoFreno: "", cubiertas: "", limpieza: "",
     tanqueLleno: false, kmInicio: "",
   });
@@ -262,9 +271,7 @@ function ChoferModule({ usuario }) {
       {etapa === 1 && (
         <div>
           <div style={s.sectionTitle}>Datos del viaje</div>
-          <div style={{ ...s.input, background: "#f9f9f9", color: "#555", marginBottom: 12, padding: "12px 14px", borderRadius: 10, border: "2px solid #8B1A2E", fontSize: 16 }}>
-            👤 {usuario.nombre}
-          </div>
+          <div style={{ ...s.input, background: "#f9f9f9", color: "#555", marginBottom: 12 }}>👤 {usuario.nombre}</div>
           <Field label="Fecha" type="date" value={f1.dia} onChange={v => upF1("dia", v)} />
           <Field label="Hora" type="time" value={f1.hora} onChange={v => upF1("hora", v)} />
           <Field label="Lugar" value={f1.lugar} onChange={v => upF1("lugar", v)} />
@@ -448,8 +455,6 @@ function MecanicoModule({ usuario }) {
 function App() {
   const [usuario, setUsuario] = useState(null);
 
-  const handleLogout = () => setUsuario(null);
-
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: "2rem" }}>
       <div style={{ background: "#8B1A2E", borderRadius: "0 0 16px 16px", padding: "16px 16px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
@@ -461,7 +466,7 @@ function App() {
             : <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>Aynorte Travel</div>
           }
         </div>
-        {usuario && <button onClick={handleLogout} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 13 }}>Salir</button>}
+        {usuario && <button onClick={() => setUsuario(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 13 }}>Salir</button>}
       </div>
 
       <div style={{ padding: "0 12px" }}>
