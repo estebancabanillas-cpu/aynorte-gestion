@@ -3,6 +3,18 @@ import { createRoot } from "react-dom/client";
 
 const SHEETS_URL = "https://script.google.com/macros/s/AKfycbxoLjI95S3a4kw3l6onp_vMZX90j0xPF6tDresQ5JBvuTlNnbQHzWnYyrFJ3q312hy8bw/exec";
 
+const USUARIOS = {
+  "9841": { nombre: "Francisco Tactagui", rol: "mecanico" },
+  "5364": { nombre: "Antonio", rol: "lavador" },
+  "0675": { nombre: "Juan Carlos Beltra", rol: "chofer" },
+  "2014": { nombre: "Roberto Cruz", rol: "chofer" },
+  "9806": { nombre: "Alejandro Diaz", rol: "chofer" },
+  "3505": { nombre: "Mauricio Rios", rol: "chofer" },
+  "0420": { nombre: "Matias Brizuela", rol: "chofer" },
+  "9410": { nombre: "Fernando Burgos", rol: "chofer" },
+  "0000": { nombre: "Chofer externo", rol: "chofer" },
+};
+
 const FLOTA = [
   { interno: "24", patente: "AF 988 TS" },
   { interno: "31", patente: "AG 208 SH" },
@@ -47,6 +59,41 @@ const enviarASheets = (modulo, datos) => {
     body: JSON.stringify({ modulo, datos }),
   }).catch(err => console.error("Error enviando a Sheets:", err));
 };
+
+function LoginScreen({ onLogin }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+
+  const handleDigito = d => { if (pin.length < 4) setPin(p => p + d); };
+  const handleBorrar = () => setPin(p => p.slice(0, -1));
+  const handleIngresar = () => {
+    const usuario = USUARIOS[pin];
+    if (usuario) { setError(""); onLogin({ pin, ...usuario }); }
+    else { setError("PIN incorrecto. Intentá de nuevo."); setPin(""); }
+  };
+
+  const btnStyle = (bg) => ({ width: 72, height: 72, fontSize: 22, fontWeight: 500, borderRadius: "50%", border: "1px solid #ddd", background: bg || "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "32px 16px" }}>
+      <div style={{ fontSize: 15, color: "#666", marginBottom: 24 }}>Ingresá tu PIN para continuar</div>
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{ width: 18, height: 18, borderRadius: "50%", background: pin.length > i ? "#8B1A2E" : "#e0e0e0" }} />
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 72px)", gap: 12, marginBottom: 16 }}>
+        {[1,2,3,4,5,6,7,8,9].map(d => (
+          <button key={d} onClick={() => handleDigito(String(d))} style={btnStyle()}>{d}</button>
+        ))}
+        <button onClick={handleBorrar} style={btnStyle("#f0f0f0")}>⌫</button>
+        <button onClick={() => handleDigito("0")} style={btnStyle()}>0</button>
+        <button onClick={handleIngresar} style={btnStyle("#8B1A2E")}><span style={{ color: "#fff", fontSize: 18 }}>→</span></button>
+      </div>
+      {error && <div style={{ color: "#c00", fontSize: 14, marginTop: 8 }}>{error}</div>}
+    </div>
+  );
+}
 
 function Field({ label, type, value, onChange, placeholder }) {
   return (
@@ -169,13 +216,13 @@ const docVLabels = {
   autorizManejo: "Autoriz. de manejo interno",
 };
 
-function ChoferModule() {
+function ChoferModule({ usuario }) {
   const [etapa, setEtapa] = useState(1);
   const [interno, setInterno] = useState("");
   const [otroInterno, setOtroInterno] = useState("");
   const [f1, setF1] = useState({
-    dia: "", hora: "", lugar: "", nroReserva: "", origen: "", destino: "", cliente: "", conductor: "", fondos: "",
-    docV: initDocV(),
+    dia: "", hora: "", lugar: "", nroReserva: "", origen: "", destino: "", cliente: "",
+    fondos: "", docV: initDocV(),
     carnetNac: { presente: false, vigente: false, vto: "" },
     libretaTrabajo: { presente: false, vigente: false, vto: "" },
     matafuego: { presente: false, vigente: false }, checkpoint: { presente: false, vigente: false },
@@ -193,19 +240,13 @@ function ChoferModule() {
   const upDV = (k, v) => setF1(p => ({ ...p, docV: { ...p.docV, [k]: v } }));
   const upF2 = (k, v) => setF2(p => ({ ...p, [k]: v }));
 
-  const handleSalida = async () => {
-    const m = await capturarMeta();
-    setMeta(m);
-    setEtapa(2);
-  };
-
+  const handleSalida = async () => { const m = await capturarMeta(); setMeta(m); setEtapa(2); };
   const handleRegreso = async () => {
     setSaving(true);
     const m = await capturarMeta();
     const metaFinal = { ...meta, horaRegreso: m.hora, latRegreso: m.lat, lngRegreso: m.lng };
-    enviarASheets("chofer", { ...f1, ...f2, interno: interno === "otro" ? otroInterno : interno, meta: metaFinal });
-    setSaving(false);
-    setSaved(true);
+    enviarASheets("chofer", { ...f1, ...f2, interno: interno === "otro" ? otroInterno : interno, conductor: usuario.nombre, pin: usuario.pin, meta: metaFinal });
+    setSaving(false); setSaved(true);
   };
 
   return (
@@ -221,6 +262,9 @@ function ChoferModule() {
       {etapa === 1 && (
         <div>
           <div style={s.sectionTitle}>Datos del viaje</div>
+          <div style={{ ...s.input, background: "#f9f9f9", color: "#555", marginBottom: 12, padding: "12px 14px", borderRadius: 10, border: "2px solid #8B1A2E", fontSize: 16 }}>
+            👤 {usuario.nombre}
+          </div>
           <Field label="Fecha" type="date" value={f1.dia} onChange={v => upF1("dia", v)} />
           <Field label="Hora" type="time" value={f1.hora} onChange={v => upF1("hora", v)} />
           <Field label="Lugar" value={f1.lugar} onChange={v => upF1("lugar", v)} />
@@ -228,7 +272,6 @@ function ChoferModule() {
           <Field label="Origen" value={f1.origen} onChange={v => upF1("origen", v)} />
           <Field label="Destino" value={f1.destino} onChange={v => upF1("destino", v)} />
           <Field label="Cliente" value={f1.cliente} onChange={v => upF1("cliente", v)} />
-          <Field label="Conductor" value={f1.conductor} onChange={v => upF1("conductor", v)} />
           <Field label="Fondos recibidos ($)" type="number" value={f1.fondos} onChange={v => upF1("fondos", v)} />
           <VehiculoSelect value={interno} onChange={setInterno} otroTexto={otroInterno} onOtroTexto={setOtroInterno} />
 
@@ -285,7 +328,7 @@ function ChoferModule() {
   );
 }
 
-function LavadorModule() {
+function LavadorModule({ usuario }) {
   const [horaEntrada, setHE] = useState("");
   const [horaSalida, setHS] = useState("");
   const [registros, setRegistros] = useState(
@@ -300,9 +343,8 @@ function LavadorModule() {
   const handleGuardar = async () => {
     setSaving(true);
     const meta = await capturarMeta();
-    enviarASheets("lavador", { horaEntrada, horaSalida, registros, meta });
-    setSaving(false);
-    setSaved(true);
+    enviarASheets("lavador", { horaEntrada, horaSalida, registros, nombre: usuario.nombre, pin: usuario.pin, meta });
+    setSaving(false); setSaved(true);
   };
 
   return (
@@ -344,7 +386,7 @@ function LavadorModule() {
   );
 }
 
-function MecanicoModule() {
+function MecanicoModule({ usuario }) {
   const [horaIngreso, setHI] = useState("");
   const [horaEgreso, setHE] = useState("");
   const [tareas, setTareas] = useState([{ id: 1, interno: "", otroInterno: "", dueno: "", descripcion: "", horas: "", repuestos: [{ id: 1, nombre: "", precio: "" }] }]);
@@ -361,9 +403,8 @@ function MecanicoModule() {
   const handleGuardar = async () => {
     setSaving(true);
     const meta = await capturarMeta();
-    enviarASheets("mecanico", { horaIngreso, horaEgreso, tareas, meta });
-    setSaving(false);
-    setSaved(true);
+    enviarASheets("mecanico", { horaIngreso, horaEgreso, tareas, nombre: usuario.nombre, pin: usuario.pin, meta });
+    setSaving(false); setSaved(true);
   };
 
   return (
@@ -405,43 +446,29 @@ function MecanicoModule() {
 }
 
 function App() {
-  const [active, setActive] = useState(null);
-  const modules = [
-    { id: "chofer", label: "Chofer", desc: "Registro pre-viaje y al regreso" },
-    { id: "lavador", label: "Antonio — Lavador", desc: "Entrada, salida y lavado de vehículos" },
-    { id: "mecanico", label: "Mecánico", desc: "Ingreso, egreso y tareas del día" },
-  ];
+  const [usuario, setUsuario] = useState(null);
+
+  const handleLogout = () => setUsuario(null);
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: "2rem" }}>
       <div style={{ background: "#8B1A2E", borderRadius: "0 0 16px 16px", padding: "16px 16px 20px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
         <img src="https://aynorte.com.ar/ievt/assets/agencias/aynorte/img/fw-18-logo-aynorte-blanco.png" alt="Aynorte" style={{ height: 48, objectFit: "contain" }} />
         <div style={{ flex: 1 }}>
-          {active
-            ? <div style={{ fontSize: 17, fontWeight: 500, color: "#fff" }}>{modules.find(m => m.id === active).label}</div>
-            : <><div style={{ fontSize: 17, fontWeight: 500, color: "#fff" }}>Gestión de personal</div>
-               <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>Aynorte Travel</div></>
+          <div style={{ fontSize: 17, fontWeight: 500, color: "#fff" }}>Gestión de personal</div>
+          {usuario
+            ? <div style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>👤 {usuario.nombre}</div>
+            : <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)" }}>Aynorte Travel</div>
           }
         </div>
-        {active && <button onClick={() => setActive(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 13 }}>← Volver</button>}
+        {usuario && <button onClick={handleLogout} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", fontSize: 13 }}>Salir</button>}
       </div>
+
       <div style={{ padding: "0 12px" }}>
-        {!active && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {modules.map(m => (
-              <button key={m.id} onClick={() => setActive(m.id)} style={{ display: "flex", alignItems: "center", gap: 16, padding: "18px 16px", textAlign: "left", borderRadius: 14, background: "#fff", border: "0.5px solid #ddd", width: "100%", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500, fontSize: 17, color: "#111" }}>{m.label}</div>
-                  <div style={{ fontSize: 14, color: "#888", marginTop: 2 }}>{m.desc}</div>
-                </div>
-                <span style={{ color: "#8B1A2E", fontSize: 20 }}>›</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {active === "chofer" && <ChoferModule />}
-        {active === "lavador" && <LavadorModule />}
-        {active === "mecanico" && <MecanicoModule />}
+        {!usuario && <LoginScreen onLogin={setUsuario} />}
+        {usuario && usuario.rol === "chofer" && <ChoferModule usuario={usuario} />}
+        {usuario && usuario.rol === "lavador" && <LavadorModule usuario={usuario} />}
+        {usuario && usuario.rol === "mecanico" && <MecanicoModule usuario={usuario} />}
       </div>
     </div>
   );
