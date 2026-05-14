@@ -107,7 +107,7 @@ function Field({ label, type, value, onChange, placeholder }) {
 function VehiculoSelect({ value, onChange, otroTexto, onOtroTexto }) {
   return (
     <div>
-      <label style={s.label}>Interno / Vehículo</label>
+      <label style={s.label}>Interno / Vehículo *</label>
       <select value={value} onChange={e => onChange(e.target.value)} style={s.select}>
         <option value="">Seleccionar...</option>
         {FLOTA.map(v => (
@@ -240,7 +240,7 @@ function ChoferModule({ usuario }) {
     aceiteMotor: "", refrigerante: "", liquidoFreno: "", cubiertas: "", limpieza: "",
     tanqueLleno: false, kmInicio: "",
   });
-  const [f2, setF2] = useState({ kmFinal: "", cantPasajeros: "", observaciones: "" });
+  const [f2, setF2] = useState({ kmFinal: "", cantPasajeros: "", saldo: "", tipoSaldo: "", observaciones: "" });
   const [meta, setMeta] = useState(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -249,8 +249,21 @@ function ChoferModule({ usuario }) {
   const upDV = (k, v) => setF1(p => ({ ...p, docV: { ...p.docV, [k]: v } }));
   const upF2 = (k, v) => setF2(p => ({ ...p, [k]: v }));
 
-  const handleSalida = async () => { const m = await capturarMeta(); setMeta(m); setEtapa(2); };
+  const handleSalida = async () => {
+    if (!f1.dia || !f1.hora || !f1.lugar || !f1.nroReserva || !f1.origen || !f1.destino || !f1.cliente || !f1.fondos || !interno || !f1.aceiteMotor || !f1.refrigerante || !f1.liquidoFreno || !f1.cubiertas || !f1.limpieza || !f1.kmInicio) {
+      alert("Por favor completá todos los campos obligatorios (*) antes de continuar.");
+      return;
+    }
+    const m = await capturarMeta();
+    setMeta(m);
+    setEtapa(2);
+  };
+
   const handleRegreso = async () => {
+    if (!f2.kmFinal || !f2.cantPasajeros || !f2.saldo || !f2.tipoSaldo) {
+      alert("Por favor completá todos los campos obligatorios antes de guardar.");
+      return;
+    }
     setSaving(true);
     const m = await capturarMeta();
     const metaFinal = { ...meta, horaRegreso: m.hora, latRegreso: m.lat, lngRegreso: m.lng };
@@ -272,14 +285,14 @@ function ChoferModule({ usuario }) {
         <div>
           <div style={s.sectionTitle}>Datos del viaje</div>
           <div style={{ ...s.input, background: "#f9f9f9", color: "#555", marginBottom: 12 }}>👤 {usuario.nombre}</div>
-          <Field label="Fecha" type="date" value={f1.dia} onChange={v => upF1("dia", v)} />
-          <Field label="Hora" type="time" value={f1.hora} onChange={v => upF1("hora", v)} />
-          <Field label="Lugar" value={f1.lugar} onChange={v => upF1("lugar", v)} />
-          <Field label="N° de reserva" value={f1.nroReserva} onChange={v => upF1("nroReserva", v)} />
-          <Field label="Origen" value={f1.origen} onChange={v => upF1("origen", v)} />
-          <Field label="Destino" value={f1.destino} onChange={v => upF1("destino", v)} />
-          <Field label="Cliente" value={f1.cliente} onChange={v => upF1("cliente", v)} />
-          <Field label="Fondos recibidos ($)" type="number" value={f1.fondos} onChange={v => upF1("fondos", v)} />
+          <Field label="Fecha *" type="date" value={f1.dia} onChange={v => upF1("dia", v)} />
+          <Field label="Hora *" type="time" value={f1.hora} onChange={v => upF1("hora", v)} />
+          <Field label="Lugar *" value={f1.lugar} onChange={v => upF1("lugar", v)} />
+          <Field label="N° de reserva *" value={f1.nroReserva} onChange={v => upF1("nroReserva", v)} />
+          <Field label="Origen *" value={f1.origen} onChange={v => upF1("origen", v)} />
+          <Field label="Destino *" value={f1.destino} onChange={v => upF1("destino", v)} />
+          <Field label="Cliente *" value={f1.cliente} onChange={v => upF1("cliente", v)} />
+          <Field label="Fondos recibidos ($) *" type="number" value={f1.fondos} onChange={v => upF1("fondos", v)} />
           <VehiculoSelect value={interno} onChange={setInterno} otroTexto={otroInterno} onOtroTexto={setOtroInterno} />
 
           <div style={s.sectionTitle}>Documentación del vehículo</div>
@@ -298,7 +311,7 @@ function ChoferModule({ usuario }) {
           <CheckItem label="Doble auxilio" value={f1.dobleAuxilio} onChange={v => upF1("dobleAuxilio", v)} />
           <CheckItem label="Cadenas" value={f1.cadenas} onChange={v => upF1("cadenas", v)} />
 
-          <div style={s.sectionTitle}>Estado del vehículo</div>
+          <div style={s.sectionTitle}>Estado del vehículo *</div>
           <NivelItem label="Aceite motor" value={f1.aceiteMotor} onChange={v => upF1("aceiteMotor", v)} />
           <NivelItem label="Refrigerante" value={f1.refrigerante} onChange={v => upF1("refrigerante", v)} />
           <NivelItem label="Líquido de freno" value={f1.liquidoFreno} onChange={v => upF1("liquidoFreno", v)} />
@@ -306,7 +319,7 @@ function ChoferModule({ usuario }) {
           <SemaforoItem label="Limpieza del vehículo" value={f1.limpieza} onChange={v => upF1("limpieza", v)} />
 
           <div style={s.sectionTitle}>Kilometraje de salida</div>
-          <Field label="Km inicio" type="number" value={f1.kmInicio} onChange={v => upF1("kmInicio", v)} />
+          <Field label="Km inicio *" type="number" value={f1.kmInicio} onChange={v => upF1("kmInicio", v)} />
           <label style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 16, background: f1.tanqueLleno ? "#1a7a3a" : "#f0f0f0", border: f1.tanqueLleno ? "2px solid #1a7a3a" : "0.5px solid #ccc", borderRadius: 10, padding: "12px 14px", cursor: "pointer", marginBottom: 12 }}>
             <input type="checkbox" checked={f1.tanqueLleno} onChange={e => upF1("tanqueLleno", e.target.checked)} style={{ width: 22, height: 22 }} />
             <span style={{ color: f1.tanqueLleno ? "#fff" : "#333" }}>Tanque lleno</span>
@@ -320,8 +333,19 @@ function ChoferModule({ usuario }) {
       {etapa === 2 && (
         <div>
           <div style={s.sectionTitle}>Al regresar</div>
-          <Field label="Km final" type="number" value={f2.kmFinal} onChange={v => upF2("kmFinal", v)} />
-          <Field label="Cantidad de pasajeros" type="number" value={f2.cantPasajeros} onChange={v => upF2("cantPasajeros", v)} />
+          <Field label="Km final *" type="number" value={f2.kmFinal} onChange={v => upF2("kmFinal", v)} />
+          <Field label="Cantidad de pasajeros *" type="number" value={f2.cantPasajeros} onChange={v => upF2("cantPasajeros", v)} />
+
+          <div style={{ borderBottom: "0.5px solid #ddd", paddingBottom: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: 15, fontWeight: 500, marginBottom: 8 }}>Saldo de fondos *</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              {["Sobrante", "Faltante"].map(t => (
+                <button key={t} onClick={() => upF2("tipoSaldo", t)} style={{ flex: 1, padding: "12px", fontSize: 15, borderRadius: 10, border: f2.tipoSaldo === t ? "2px solid " + (t === "Sobrante" ? "#1a7a3a" : "#c0392b") : "1px solid #ccc", background: f2.tipoSaldo === t ? (t === "Sobrante" ? "#1a7a3a" : "#c0392b") : "#f0f0f0", color: f2.tipoSaldo === t ? "#fff" : "#333", fontWeight: f2.tipoSaldo === t ? 500 : 400 }}>{t}</button>
+              ))}
+            </div>
+            {f2.tipoSaldo && <Field label={"Monto " + f2.tipoSaldo.toLowerCase() + " ($) *"} type="number" value={f2.saldo} onChange={v => upF2("saldo", v)} />}
+          </div>
+
           <div>
             <label style={s.label}>Observaciones del viaje</label>
             <textarea value={f2.observaciones} onChange={e => upF2("observaciones", e.target.value)} rows={5} style={s.textarea} placeholder="Cualquier novedad del viaje..." />
@@ -348,6 +372,10 @@ function LavadorModule({ usuario }) {
   const addExterno = () => setRegistros(r => [...r, { id: "ext_" + Date.now(), interno: "", patente: "", lavado: false, observacion: "", externo: true }]);
 
   const handleGuardar = async () => {
+    if (!horaEntrada || !horaSalida) {
+      alert("Por favor completá la hora de entrada y salida antes de guardar.");
+      return;
+    }
     setSaving(true);
     const meta = await capturarMeta();
     enviarASheets("lavador", { horaEntrada, horaSalida, registros, nombre: usuario.nombre, pin: usuario.pin, meta });
@@ -357,8 +385,8 @@ function LavadorModule({ usuario }) {
   return (
     <div>
       <div style={s.sectionTitle}>Horario</div>
-      <Field label="Hora de entrada" type="time" value={horaEntrada} onChange={setHE} />
-      <Field label="Hora de salida" type="time" value={horaSalida} onChange={setHS} />
+      <Field label="Hora de entrada *" type="time" value={horaEntrada} onChange={setHE} />
+      <Field label="Hora de salida *" type="time" value={horaSalida} onChange={setHS} />
       <div style={s.sectionTitle}>Registro de lavado</div>
       {registros.map(r => (
         <div key={r.id} style={s.card}>
@@ -408,6 +436,10 @@ function MecanicoModule({ usuario }) {
   const upR = (tid, rid, k, v) => setTareas(t => t.map(x => x.id === tid ? { ...x, repuestos: x.repuestos.map(r => r.id === rid ? { ...r, [k]: v } : r) } : x));
 
   const handleGuardar = async () => {
+    if (!horaIngreso || !horaEgreso) {
+      alert("Por favor completá la hora de ingreso y egreso antes de guardar.");
+      return;
+    }
     setSaving(true);
     const meta = await capturarMeta();
     enviarASheets("mecanico", { horaIngreso, horaEgreso, tareas, nombre: usuario.nombre, pin: usuario.pin, meta });
@@ -417,8 +449,8 @@ function MecanicoModule({ usuario }) {
   return (
     <div>
       <div style={s.sectionTitle}>Horario</div>
-      <Field label="Hora de ingreso" type="time" value={horaIngreso} onChange={setHI} />
-      <Field label="Hora de egreso" type="time" value={horaEgreso} onChange={setHE} />
+      <Field label="Hora de ingreso *" type="time" value={horaIngreso} onChange={setHI} />
+      <Field label="Hora de egreso *" type="time" value={horaEgreso} onChange={setHE} />
       <div style={s.sectionTitle}>Tareas del día</div>
       {tareas.map((t, i) => (
         <div key={t.id} style={s.card}>
